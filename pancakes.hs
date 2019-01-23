@@ -71,20 +71,27 @@ is_member el (elem:tail)
 
 deQueue (peek:tail) = (peek,tail)
 
-bfs init_list = bfs_recursive [init_list] Set.empty
+construct_solution state meta_map
+                             | (length st == 0) = []
+                             | otherwise = action:(construct_solution st meta_map)
+                             where
+                             (st,action) = Map.findWithDefault ([],-1) state meta_map
 
-bfs_recursive open_set closed_set
-                                 | (is_goal_state subtree_root == True) = True
-                                 | (List.null open_set == True)         = False
-                                 | otherwise                            = bfs_recursive new_open new_close  
-                                 where
-                                 (subtree_root,open_without_peek) = deQueue open_set
-                                 (new_open,new_close) = expand_with_successors subtree_root (get_successors subtree_root (length subtree_root)) open_without_peek closed_set
+bfs init_list = bfs_recursive [init_list] Set.empty (Map.insert init_list ([],-1)(Map.empty))
 
-expand_with_successors subtree_root [] open_set closed_set = (open_set,(Set.insert subtree_root closed_set))
-expand_with_successors subtree_root ((action,move):tail) open_set closed_set
-                                                                           | (in_close==True || in_open==True) = expand_with_successors subtree_root tail open_set closed_set
-                                                                           | otherwise                         = expand_with_successors subtree_root tail (open_set++[move]) closed_set
-                                                                           where
-                                                                           in_close = Set.member move closed_set
-                                                                           in_open = is_member move open_set
+bfs_recursive open_set closed_set meta_map
+  | (is_goal_state subtree_root == True) = reverse(construct_solution subtree_root meta_map)
+  | (List.null open_set == True)         = []
+  | otherwise                            = bfs_recursive new_open new_close new_map  
+  where
+  (subtree_root,open_without_peek) = deQueue open_set
+  (new_open,new_close,new_map) = expand_with_successors subtree_root (get_successors subtree_root (length subtree_root)) open_without_peek closed_set meta_map
+
+expand_with_successors subtree_root [] open_set closed_set meta_map = (open_set,(Set.insert subtree_root closed_set),meta_map)
+expand_with_successors subtree_root ((action,move):tail) open_set closed_set meta_map
+  | (in_close==True || in_open==True) = expand_with_successors subtree_root tail open_set closed_set meta_map
+  | otherwise                         = expand_with_successors subtree_root tail (open_set++[move]) closed_set new_meta_map
+  where
+  in_close = Set.member move closed_set
+  in_open = is_member move open_set
+  new_meta_map = Map.insert move (subtree_root,action) meta_map
