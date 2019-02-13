@@ -2,4 +2,4 @@
 
 -->Solving problems and puzzles in haskell.
 
--->Solving pancakes sorting problem implementind basic sorting and AI search algorithms such as BFS and Bidirectional Search.
+-->Solving pancakes sorting problem implementing basic sorting and AI search algorithms such as BFS and Bidirectional Search.
