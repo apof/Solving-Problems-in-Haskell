@@ -52,6 +52,13 @@ visualize list moves = list:(vis list moves)
 
 naive list = flatten_sol(create_final_solution(find_naive_solution list (length list)))
 
+--quicksort
+
+quicksort [] = []
+quicksort (x:xs) = quicksort small ++ (x : quicksort large)
+   where small = [y | y <- xs, y <= x]
+         large = [y | y <- xs, y > x]
+
 --bfs
 get_successors l 1 = []
 get_successors l length = (length,flip):(get_successors l (length-1))
@@ -63,6 +70,7 @@ is_goal el [] = True
 is_goal el (elem:tail)
                      | el <= elem = is_goal elem tail
                      | el > elem = False
+
 
 is_member el [] = False
 is_member el (elem:tail)
@@ -95,3 +103,45 @@ expand_with_successors subtree_root ((action,move):tail) open_set closed_set met
   in_close = Set.member move closed_set
   in_open = is_member move open_set
   new_meta_map = Map.insert move (subtree_root,action) meta_map
+
+
+--bidirectional_search
+
+bidirectional init_list = bdrs_recursive [init_list] [end_list] Set.empty Set.empty (Map.insert init_list ([],-1)(Map.empty)) (Map.insert end_list ([],-1)(Map.empty)) init_list
+  where
+  end_list = quicksort init_list
+
+bdrs_recursive open_set_I open_set_G closed_set_I closed_set_G meta_map_I meta_map_G init_list
+  |(List.null open_set_I == True && List.null open_set_G == True)  = []
+  |(List.null open_set_I == False && List.null open_set_G == True) = check_I open_set_I open_set_G closed_set_I closed_set_G meta_map_I meta_map_G init_list
+  |(List.null open_set_I == True && List.null open_set_G == False) = check_G open_set_I open_set_G closed_set_I closed_set_G meta_map_I meta_map_G init_list
+  |(List.null open_set_I == False && List.null open_set_G == False) = check_IG open_set_I open_set_G closed_set_I closed_set_G meta_map_I meta_map_G init_list
+  
+
+check_I open_set_I open_set_G closed_set_I closed_set_G meta_map_I meta_map_G init_list
+  |(is_goal_state subtree_root_I == True ) = reverse(construct_solution subtree_root_I meta_map_I) 
+  |((is_member subtree_root_I open_set_G) == True) = reverse(construct_solution subtree_root_I meta_map_I) ++ construct_solution subtree_root_I meta_map_G
+  |otherwise = bdrs_recursive new_open_I open_set_G new_close_I closed_set_G new_map_I meta_map_G init_list
+   where 
+   (subtree_root_I,open_without_peek_I) = deQueue open_set_I
+   (new_open_I,new_close_I,new_map_I) = expand_with_successors subtree_root_I (get_successors subtree_root_I (length subtree_root_I)) open_without_peek_I closed_set_I meta_map_I
+
+check_G open_set_I open_set_G closed_set_I closed_set_G meta_map_I meta_map_G init_list
+  |(subtree_root_G == init_list) = construct_solution subtree_root_G meta_map_G 
+  |((is_member subtree_root_G open_set_I) == True) = reverse(construct_solution subtree_root_G meta_map_I) ++ construct_solution subtree_root_G meta_map_G
+  |otherwise = bdrs_recursive open_set_I new_open_G closed_set_I new_close_G meta_map_I new_map_G init_list
+   where 
+   (subtree_root_G,open_without_peek_G) = deQueue open_set_G
+   (new_open_G,new_close_G,new_map_G) = expand_with_successors subtree_root_G (get_successors subtree_root_G (length subtree_root_G)) open_without_peek_G closed_set_G meta_map_G
+
+check_IG open_set_I open_set_G closed_set_I closed_set_G meta_map_I meta_map_G init_list
+  |(is_goal_state subtree_root_I == True) = reverse(construct_solution subtree_root_I meta_map_I) 
+  |((is_member subtree_root_I open_set_G) == True) = reverse(construct_solution subtree_root_I meta_map_I) ++ construct_solution subtree_root_I meta_map_G
+  |(subtree_root_G == init_list) = construct_solution subtree_root_G meta_map_G 
+  |((is_member subtree_root_G open_set_I) == True) = reverse(construct_solution subtree_root_G meta_map_I) ++ construct_solution subtree_root_G meta_map_G
+  |otherwise = bdrs_recursive new_open_I new_open_G new_close_I new_close_G new_map_I new_map_G init_list 
+  where
+  (subtree_root_G,open_without_peek_G) = deQueue open_set_G
+  (subtree_root_I,open_without_peek_I) = deQueue open_set_I
+  (new_open_G,new_close_G,new_map_G) = expand_with_successors subtree_root_G (get_successors subtree_root_G (length subtree_root_G)) open_without_peek_G closed_set_G meta_map_G
+  (new_open_I,new_close_I,new_map_I) = expand_with_successors subtree_root_I (get_successors subtree_root_I (length subtree_root_I)) open_without_peek_I closed_set_I meta_map_I
